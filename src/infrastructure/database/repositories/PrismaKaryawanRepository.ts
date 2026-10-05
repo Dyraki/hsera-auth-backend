@@ -72,6 +72,9 @@ export class PrismaKaryawanRepository implements IKaryawanRepository {
   }
 
   async findById(id: string): Promise<KaryawanDetail | null> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) return null;
+
     const db = await this.prisma.karyawan.findUnique({
       where: { id },
       include: {
