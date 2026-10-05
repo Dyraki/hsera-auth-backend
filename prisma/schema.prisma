@@ -1,0 +1,198 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model LoginUsr {
+  id               String          @id @default(uuid()) @db.Uuid
+  username         String          @unique @db.VarChar(50)
+  passwd           String          @db.VarChar(100)
+  aktif            Int             @default(1) @db.SmallInt
+  tgl1             DateTime        @map("tgl_1") @db.Date
+  tgl2             DateTime        @map("tgl_2") @db.Date
+  jenis            String          @db.VarChar(50)
+  idRelasi         String?         @unique @map("id_relasi") @db.Uuid
+  
+  karyawan         Karyawan?       @relation("KaryawanAccount", fields: [idRelasi], references: [id], onDelete: SetNull)
+  groups           LoginUsrGrp[]
+  logs             LoginLog[]
+  sessions         UserSession[]
+
+  createdOUs       OperationUnit[] @relation("OUCreator")
+  updatedOUs       OperationUnit[] @relation("OUUpdater")
+  createdKaryawans Karyawan[]      @relation("KaryawanCreator")
+  updatedKaryawans Karyawan[]      @relation("KaryawanUpdater")
+
+  @@map("login_usr")
+}
+
+model LoginGrp {
+  id    String        @id @default(uuid()) @db.Uuid
+  nama  String        @db.VarChar(100)
+  aktif Int           @default(1) @db.SmallInt
+  users LoginUsrGrp[]
+  acls  LoginGrpAcl[]
+
+  @@map("login_grp")
+}
+
+model LoginUsrGrp {
+  id         String   @id @default(uuid()) @db.Uuid
+  loginUsrId String   @map("login_usr_id") @db.Uuid
+  loginGrpId String   @map("login_grp_id") @db.Uuid
+  user       LoginUsr @relation(fields: [loginUsrId], references: [id], onDelete: Cascade)
+  group      LoginGrp @relation(fields: [loginGrpId], references: [id], onDelete: Cascade)
+
+  @@map("login_usr_grp")
+}
+
+model LoginGrpAcl {
+  id         String   @id @default(uuid()) @db.Uuid
+  loginGrpId String   @map("login_grp_id") @db.Uuid
+  menuId     String   @map("menu_id") @db.Uuid
+  enable     Int      @default(1) @db.SmallInt
+  level      Int      @default(0) @db.SmallInt
+  group      LoginGrp @relation(fields: [loginGrpId], references: [id], onDelete: Cascade)
+  menu       Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@map("login_grp_acl")
+}
+
+model Menu {
+  id       String        @id @default(uuid()) @db.Uuid
+  upline   String?       @db.Uuid
+  urut     Int           @default(0) @db.SmallInt
+  nama     String        @db.VarChar(255)
+  tipe     String        @db.VarChar(10)
+  level    Int           @default(1) @db.SmallInt
+  link     String        @default("#") @db.VarChar(100)
+  icon     String        @default("glyphicon glyphicon-file") @db.VarChar(40)
+  aktif    Int           @default(1) @db.SmallInt
+  acls     LoginGrpAcl[]
+  logs     LoginLog[]
+  parent   Menu?         @relation("MenuHierarchy", fields: [upline], references: [id], onDelete: Cascade)
+  children Menu[]        @relation("MenuHierarchy")
+
+  @@map("menu")
+}
+
+model LoginLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  loginUsrId  String   @map("login_usr_id") @db.Uuid
+  menuId      String?  @map("menu_id") @db.Uuid
+  menuNama    String?  @map("menu_nama") @db.VarChar(100)
+  status      String   @db.VarChar(100)
+  tabelRelasi String?  @map("tabel_relasi") @db.VarChar(100)
+  idRelasi    String?  @map("id_relasi") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+  user        LoginUsr @relation(fields: [loginUsrId], references: [id], onDelete: Cascade)
+  menu        Menu?    @relation(fields: [menuId], references: [id], onDelete: SetNull)
+
+  @@map("login_log")
+}
+
+model OperationUnit {
+  id                  String          @id @default(uuid()) @db.Uuid
+  parentId            String?         @map("parent_id") @db.Uuid
+  code                String          @unique @db.VarChar(50)
+  name                String          @db.VarChar(150)
+  type                String          @db.VarChar(50) // 'HEAD_OFFICE' | 'REGIONAL' | 'AREA_OFFICE' | 'OPERATION_UNIT'
+  category            String?         @db.VarChar(50)
+  distributionPoint   String?         @map("distribution_point") @db.VarChar(100)
+  address             String?         @db.Text
+  provinceId          String?         @map("province_id") @db.Uuid
+  cityId              String?         @map("city_id") @db.Uuid
+  districtId          String?         @map("district_id") @db.Uuid
+  villageId           String?         @map("village_id") @db.Uuid
+  postalCode          String?         @map("postal_code") @db.VarChar(10)
+  phone               String?         @db.VarChar(30)
+  latitude            Decimal?        @db.Decimal(10, 8)
+  longitude           Decimal?        @db.Decimal(11, 8)
+  buildingStatus      String?         @map("building_status") @db.VarChar(30)
+  leaseCategory       String?         @map("lease_category") @db.VarChar(30)
+  leaseStartDate      DateTime?       @map("lease_start_date") @db.Date
+  leaseEndDate        DateTime?       @map("lease_end_date") @db.Date
+  annualRent          Decimal?        @map("annual_rent") @db.Decimal(15, 2)
+  legalDocumentType   String?         @map("legal_document_type") @db.VarChar(50)
+  legalDocumentNumber String?         @map("legal_document_number") @db.VarChar(100)
+  status              Boolean         @default(true)
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamp(3)
+  createdBy           String?         @map("created_by") @db.Uuid
+  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamp(3)
+  updatedBy           String?         @map("updated_by") @db.Uuid
+
+  parent              OperationUnit?  @relation("UnitTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children            OperationUnit[] @relation("UnitTree")
+  karyawans           Karyawan[]
+  creator             LoginUsr?       @relation("OUCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  updater             LoginUsr?       @relation("OUUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@map("operation_unit")
+}
+
+model Karyawan {
+  id                    String         @id @default(uuid()) @db.Uuid
+  operationUnitId       String         @map("operation_unit_id") @db.Uuid
+  divisionId            String?        @map("division_id") @db.Uuid
+  supervisorId          String?        @map("supervisor_id") @db.Uuid
+  employeeNumber        String         @unique @map("employee_number") @db.VarChar(50)
+  nik                   String         @unique @db.VarChar(20)
+  legalName             String         @map("legal_name") @db.VarChar(150)
+  email                 String?        @unique @db.VarChar(100)
+  phone                 String?        @db.VarChar(30)
+  sex                   String?        @db.VarChar(20)
+  maritalStatus         String?        @map("marital_status") @db.VarChar(30)
+  religion              String?        @db.VarChar(30)
+  placeOfBirth          String?        @map("place_of_birth") @db.VarChar(100)
+  dateOfBirth           DateTime?      @map("date_of_birth") @db.Date
+  lastEducation         String?        @map("last_education") @db.VarChar(50)
+  address               String?        @db.Text
+  provinceId            String?        @map("province_id") @db.Uuid
+  cityId                String?        @map("city_id") @db.Uuid
+  districtId            String?        @map("district_id") @db.Uuid
+  villageId             String?        @map("village_id") @db.Uuid
+  postalCode            String?        @map("postal_code") @db.VarChar(10)
+  originalDateOfHire    DateTime?      @map("original_date_of_hire") @db.Date
+  permanentDate         DateTime?      @map("permanent_date") @db.Date
+  actualTerminationDate DateTime?      @map("actual_termination_date") @db.Date
+  bankId                String?        @map("bank_id") @db.Uuid
+  accountName           String?        @map("account_name") @db.VarChar(100)
+  accountNumber         String?        @map("account_number") @db.VarChar(50)
+  status                Boolean        @default(true)
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamp(3)
+  createdBy             String?        @map("created_by") @db.Uuid
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamp(3)
+  updatedBy             String?        @map("updated_by") @db.Uuid
+
+  operationUnit         OperationUnit  @relation(fields: [operationUnitId], references: [id], onDelete: Restrict)
+  supervisor            Karyawan?      @relation("SupervisorTree", fields: [supervisorId], references: [id], onDelete: SetNull)
+  subordinates          Karyawan[]     @relation("SupervisorTree")
+  userAccount           LoginUsr?      @relation("KaryawanAccount")
+  creator               LoginUsr?      @relation("KaryawanCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  updater               LoginUsr?      @relation("KaryawanUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@map("karyawan")
+}
+
+model UserSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @map("refresh_token_hash") @db.VarChar(255)
+  ipAddress        String?   @map("ip_address") @db.VarChar(45)
+  userAgent        String?   @map("user_agent") @db.Text
+  isRevoked        Boolean   @default(false) @map("is_revoked")
+  expiresAt        DateTime  @map("expires_at") @db.Timestamp(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
+
+  user             LoginUsr  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshTokenHash])
+  @@map("user_session")
+}
+
