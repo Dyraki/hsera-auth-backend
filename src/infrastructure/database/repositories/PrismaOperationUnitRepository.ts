@@ -68,10 +68,14 @@ export class PrismaOperationUnitRepository implements IOperationUnitRepository {
     return new OperationUnit(this.toProps(db));
   }
 
-  async findAll(filters?: { type?: string; status?: boolean; search?: string }): Promise<OperationUnit[]> {
+  async findAll(filters?: { type?: string; status?: boolean; search?: string; allowedUnitIds?: string[] }): Promise<OperationUnit[]> {
     const where: any = {};
     if (filters?.type) where.type = filters.type;
     if (filters?.status !== undefined) where.status = filters.status;
+    if (filters?.allowedUnitIds) {
+      if (filters.allowedUnitIds.length === 0) return [];
+      where.id = { in: filters.allowedUnitIds };
+    }
     if (filters?.search) {
       where.OR = [
         { code: { contains: filters.search, mode: 'insensitive' } },
@@ -286,5 +290,13 @@ export class PrismaOperationUnitRepository implements IOperationUnitRepository {
     return this.prisma.karyawan.count({
       where: { operationUnitId: id }
     });
+  }
+
+  async getUnitIdsCreatedBy(userId: string): Promise<string[]> {
+    const units = await this.prisma.operationUnit.findMany({
+      where: { createdBy: userId },
+      select: { id: true }
+    });
+    return units.map(u => u.id);
   }
 }

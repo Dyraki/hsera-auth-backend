@@ -9,7 +9,7 @@ export const AclMiddleware = (menuId: string, minLevel: number) => {
     }
 
     // Super user bypass (admin & SA automatically have full access)
-    if (user.username === 'admin' || user.jenis === 'SA' || user.jenis === 'admin') {
+    if (user.username === 'admin' || user.jenis === 'SA' || user.jenis === 'admin' || user.scope?.isSuperAdmin) {
       return next();
     }
 

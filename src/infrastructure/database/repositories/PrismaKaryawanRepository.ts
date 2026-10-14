@@ -139,7 +139,16 @@ export class PrismaKaryawanRepository implements IKaryawanRepository {
     }
 
     if (params.operationUnitId) {
-      where.operationUnitId = params.operationUnitId;
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.operationUnitId);
+      if (isUuid) {
+        where.operationUnitId = params.operationUnitId;
+      } else {
+        const ou = await this.prisma.operationUnit.findFirst({
+          where: { code: params.operationUnitId },
+          select: { id: true },
+        });
+        where.operationUnitId = ou ? ou.id : "00000000-0000-0000-0000-000000000000";
+      }
     } else if (params.allowedUnitIds && params.allowedUnitIds.length > 0) {
       where.operationUnitId = { in: params.allowedUnitIds };
     }

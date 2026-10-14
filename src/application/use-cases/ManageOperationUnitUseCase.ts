@@ -13,6 +13,50 @@ export class ManageOperationUnitUseCase {
     return this.ouRepo.findAll(filters);
   }
 
+  async getScopedUnits(params: {
+    isSuperAdmin: boolean;
+    userUnitId?: string | null;
+    userId?: string | null;
+    filters?: { type?: string; status?: boolean; search?: string };
+  }): Promise<any[]> {
+    const { isSuperAdmin, userUnitId, userId, filters } = params;
+
+    let allowedUnitIds: string[] | undefined = undefined;
+
+    if (!isSuperAdmin) {
+      const descendantIds = userUnitId ? await this.ouRepo.getAllDescendantIds(userUnitId) : [];
+      const createdIds = userId ? await this.ouRepo.getUnitIdsCreatedBy(userId) : [];
+      allowedUnitIds = Array.from(new Set([...descendantIds, ...createdIds]));
+
+      if (allowedUnitIds.length === 0) {
+        return [];
+      }
+    }
+
+    const units = await this.ouRepo.findAll({
+      ...filters,
+      allowedUnitIds,
+    });
+
+    const results = [];
+    for (const u of units) {
+      let hierarchyPath = u.name;
+      try {
+        const lineage = await this.ouRepo.getHierarchyLineage(u.id);
+        hierarchyPath = lineage.breadcrumb;
+      } catch {
+        // fallback
+      }
+
+      results.push({
+        ...u.props,
+        hierarchyPath,
+      });
+    }
+
+    return results;
+  }
+
   async getTree(): Promise<OperationUnitTreeNode[]> {
     return this.ouRepo.findTree();
   }

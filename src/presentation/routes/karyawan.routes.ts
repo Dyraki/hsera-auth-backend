@@ -22,6 +22,13 @@ router.get(
   KaryawanController.getAll
 );
 
+// Lookup Karyawan untuk Referensi / Dropdown (Cukup Authenticated)
+router.get(
+  '/lookup',
+  AuthMiddleware,
+  KaryawanController.getAll
+);
+
 router.get(
   '/:id',
   AuthMiddleware,

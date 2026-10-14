@@ -22,6 +22,13 @@ router.get(
   OperationUnitController.getAll
 );
 
+// Endpoint Scoped Units untuk Dropdown / Referensi lintas modul (Cukup Authenticated)
+router.get(
+  '/my-scope',
+  AuthMiddleware,
+  OperationUnitController.getMyScope
+);
+
 router.get(
   '/:id',
   AuthMiddleware,

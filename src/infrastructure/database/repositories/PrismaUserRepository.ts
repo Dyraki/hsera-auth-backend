@@ -69,23 +69,33 @@ export class PrismaUserRepository implements IUserRepository {
     });
 
     // 3. Gabungkan hak akses: jika ada yang aktif (1) maka diaktifkan,
-    //    dan ambil level akses yang tertinggi.
+    //    dan gabungkan level akses (CRUD) secara bitwise OR.
     const permissionMap: { [menuId: string]: UserPermission } = {};
 
     for (const acl of acls) {
       const menuId = acl.menuId;
       const isEnabled = acl.enable === 1;
-      const level = acl.level;
+      let rawLevel = acl.level;
+      if (rawLevel === 4) rawLevel = 1111;
+      else if (rawLevel === 3) rawLevel = 1110;
+      else if (rawLevel === 2) rawLevel = 1100;
+      else if (rawLevel === 1) rawLevel = 100;
 
       if (!permissionMap[menuId]) {
         permissionMap[menuId] = {
           menuId,
           enable: isEnabled,
-          level,
+          level: rawLevel,
         };
       } else {
         permissionMap[menuId].enable = permissionMap[menuId].enable || isEnabled;
-        permissionMap[menuId].level = Math.max(permissionMap[menuId].level, level);
+        const curStr = String(permissionMap[menuId].level).padStart(4, "0");
+        const newStr = String(rawLevel).padStart(4, "0");
+        const c = curStr[0] === "1" || newStr[0] === "1" ? "1" : "0";
+        const r = curStr[1] === "1" || newStr[1] === "1" ? "1" : "0";
+        const u = curStr[2] === "1" || newStr[2] === "1" ? "1" : "0";
+        const d = curStr[3] === "1" || newStr[3] === "1" ? "1" : "0";
+        permissionMap[menuId].level = Number(`${c}${r}${u}${d}`);
       }
     }
 

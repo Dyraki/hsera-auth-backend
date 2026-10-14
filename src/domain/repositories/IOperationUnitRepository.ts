@@ -38,7 +38,8 @@ export interface UpdateOperationUnitDTO extends Partial<CreateOperationUnitDTO> 
 export interface IOperationUnitRepository {
   findById(id: string): Promise<OperationUnit | null>;
   findByCode(code: string): Promise<OperationUnit | null>;
-  findAll(filters?: { type?: string; status?: boolean; search?: string }): Promise<OperationUnit[]>;
+  findAll(filters?: { type?: string; status?: boolean; search?: string; allowedUnitIds?: string[] }): Promise<OperationUnit[]>;
+  getUnitIdsCreatedBy(userId: string): Promise<string[]>;
   findTree(): Promise<OperationUnitTreeNode[]>;
   getAllDescendantIds(unitId: string): Promise<string[]>;
   getHierarchyLineage(unitId: string): Promise<{

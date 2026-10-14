@@ -59,7 +59,9 @@ export class RefreshTokenUseCase {
 
     // 5. Ambil data izin (ACL) & scope terbaru
     const permissions = await this.userRepository.findPermissionsByUserId(user.id);
-    const isSuperAdmin = user.jenis === 'SA' || user.username === 'admin';
+    const userRoles = (this.userRepository.getUserRoles ? await this.userRepository.getUserRoles(user.id) : []) || [];
+    const hasSuperAdminRole = userRoles.some(r => r.nama === 'SUPER ADMIN' || r.id === 'b1000000-0000-4000-b000-000000000001');
+    const isSuperAdmin = user.jenis === 'SA' || user.username === 'admin' || hasSuperAdminRole;
     let employeeData = null;
     let scopeContext: UserScopeContext = {
       isSuperAdmin,
