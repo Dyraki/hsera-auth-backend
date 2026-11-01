@@ -1,6 +1,9 @@
 {
   "name": "auth-platform-backend",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.23.4"
+  },
   "description": "Backend Core Auth & ACL Service",
   "main": "dist/presentation/index.js",
   "scripts": {
