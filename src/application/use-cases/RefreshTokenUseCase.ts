@@ -118,11 +118,16 @@ export class RefreshTokenUseCase {
     }
 
     // 6. Terbitkan Access Token baru (15 Menit)
+    const activeRoles = userRoles.filter((r) => r.aktif === 1);
+    const primaryRole = activeRoles[0]?.nama || userRoles[0]?.nama || (isSuperAdmin ? 'SUPER ADMIN' : null);
+
     const tokenPayload = {
       sub: user.id,
       username: user.username,
       jenis: user.jenis,
       idRelasi: user.idRelasi,
+      roles: userRoles.map((r) => ({ id: r.id, nama: r.nama, aktif: r.aktif })),
+      roleName: primaryRole,
       karyawan: employeeData,
       scope: scopeContext,
       permissions: permissions.map((p) => ({

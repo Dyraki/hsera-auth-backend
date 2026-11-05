@@ -28,6 +28,8 @@ export interface LoginResponseDto {
     username: string;
     jenis: string;
     idRelasi: string | null;
+    roles?: Array<{ id: string; nama: string; aktif: number }>;
+    roleName?: string | null;
     karyawan?: {
       id: string;
       employeeNumber: string;
@@ -162,11 +164,16 @@ export class LoginUseCase {
     }
 
     // 6. Generate Short-Lived Access Token (15 menit)
+    const activeRoles = userRoles.filter(r => r.aktif === 1);
+    const primaryRole = activeRoles[0]?.nama || userRoles[0]?.nama || (isSuperAdmin ? 'SUPER ADMIN' : null);
+
     const tokenPayload = {
       sub: user.id,
       username: user.username,
       jenis: user.jenis,
       idRelasi: user.idRelasi,
+      roles: userRoles.map(r => ({ id: r.id, nama: r.nama, aktif: r.aktif })),
+      roleName: primaryRole,
       karyawan: employeeData,
       scope: scopeContext,
       permissions: permissions.map(p => ({
@@ -204,6 +211,8 @@ export class LoginUseCase {
         username: user.username,
         jenis: user.jenis,
         idRelasi: user.idRelasi,
+        roles: userRoles.map(r => ({ id: r.id, nama: r.nama, aktif: r.aktif })),
+        roleName: primaryRole,
         karyawan: employeeData,
         scope: scopeContext
       }

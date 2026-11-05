@@ -126,7 +126,17 @@ export class AuthController {
   }
 
   public static async profile(req: any, res: Response): Promise<void> {
-    res.status(200).json({ user: req.user });
+    try {
+      const user = { ...req.user };
+      if ((!user.roles || user.roles.length === 0) && user.sub) {
+        const roles = await AuthController.userRepository.getUserRoles(user.sub);
+        user.roles = roles;
+        user.roleName = roles.find((r) => r.aktif === 1)?.nama || roles[0]?.nama || (user.scope?.isSuperAdmin || user.jenis === 'SA' ? 'SUPER ADMIN' : null);
+      }
+      res.status(200).json({ user });
+    } catch {
+      res.status(200).json({ user: req.user });
+    }
   }
 
   public static async getSessions(req: any, res: Response): Promise<void> {
