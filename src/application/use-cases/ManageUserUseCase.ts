@@ -4,6 +4,7 @@ import {
   UserRoleItem,
 } from '../../domain/repositories/IUserRepository';
 import { IPasswordHasher } from './LoginUseCase';
+import { PasswordValidator } from '../../infrastructure/security/PasswordValidator';
 import { randomUUID } from 'node:crypto';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -48,6 +49,11 @@ export class ManageUserUseCase {
   async create(dto: CreateUserDto): Promise<UserWithRoles> {
     if (!dto.username || !dto.password) {
       throw new Error('Username dan password wajib diisi.');
+    }
+
+    const passwordValidation = PasswordValidator.validate(dto.password, dto.username);
+    if (!passwordValidation.isValid) {
+      throw new Error(passwordValidation.error || 'Password tidak memenuhi standar keamanan.');
     }
 
     const userId = dto.id?.trim() || randomUUID();
@@ -101,6 +107,12 @@ export class ManageUserUseCase {
     const updatePayload: any = {};
     if (dto.username) updatePayload.username = dto.username.trim();
     if (dto.password && dto.password.trim().length > 0) {
+      const targetUsername = dto.username || existing.username;
+      const passwordValidation = PasswordValidator.validate(dto.password, targetUsername);
+      if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.error || 'Password baru tidak memenuhi standar keamanan.');
+      }
+
       updatePayload.passwordHash = this.passwordHasher.hash
         ? this.passwordHasher.hash(dto.password)
         : (this.passwordHasher as any).hashLegacy

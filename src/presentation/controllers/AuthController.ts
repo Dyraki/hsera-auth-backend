@@ -3,6 +3,9 @@ import { LoginUseCase } from '../../application/use-cases/LoginUseCase';
 import { RefreshTokenUseCase } from '../../application/use-cases/RefreshTokenUseCase';
 import { LogoutUseCase } from '../../application/use-cases/LogoutUseCase';
 import { SessionManagementUseCase } from '../../application/use-cases/SessionManagementUseCase';
+import { GetDetailedProfileUseCase } from '../../application/use-cases/GetDetailedProfileUseCase';
+import { UpdateProfileContactUseCase } from '../../application/use-cases/UpdateProfileContactUseCase';
+import { ChangeUserPasswordUseCase } from '../../application/use-cases/ChangeUserPasswordUseCase';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/PrismaUserRepository';
 import { PrismaLoginLogRepository } from '../../infrastructure/database/repositories/PrismaLoginLogRepository';
 import { PrismaUserSessionRepository } from '../../infrastructure/database/repositories/PrismaUserSessionRepository';
@@ -55,6 +58,22 @@ export class AuthController {
   private static readonly sessionManagementUseCase = new SessionManagementUseCase(
     AuthController.sessionRepository,
     AuthController.tokenService
+  );
+
+  private static readonly getDetailedProfileUseCase = new GetDetailedProfileUseCase(
+    AuthController.userRepository,
+    AuthController.karyawanRepository,
+    AuthController.ouRepository
+  );
+
+  private static readonly updateProfileContactUseCase = new UpdateProfileContactUseCase(
+    AuthController.userRepository,
+    AuthController.karyawanRepository
+  );
+
+  private static readonly changeUserPasswordUseCase = new ChangeUserPasswordUseCase(
+    AuthController.userRepository,
+    AuthController.passwordHasher
   );
 
   public static async login(req: Request, res: Response): Promise<void> {
@@ -127,15 +146,46 @@ export class AuthController {
 
   public static async profile(req: any, res: Response): Promise<void> {
     try {
-      const user = { ...req.user };
-      if ((!user.roles || user.roles.length === 0) && user.sub) {
-        const roles = await AuthController.userRepository.getUserRoles(user.sub);
-        user.roles = roles;
-        user.roleName = roles.find((r) => r.aktif === 1)?.nama || roles[0]?.nama || (user.scope?.isSuperAdmin || user.jenis === 'SA' ? 'SUPER ADMIN' : null);
+      const userId = req.user?.sub;
+      if (!userId) {
+        res.status(401).json({ message: 'Autentikasi diperlukan. Pengguna tidak terverifikasi.' });
+        return;
       }
-      res.status(200).json({ user });
-    } catch {
-      res.status(200).json({ user: req.user });
+
+      const detailedProfile = await AuthController.getDetailedProfileUseCase.execute(userId);
+      res.status(200).json(detailedProfile);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || 'Gagal memuat profil pengguna.' });
+    }
+  }
+
+  public static async updateProfile(req: any, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.sub;
+      if (!userId) {
+        res.status(401).json({ message: 'Autentikasi diperlukan.' });
+        return;
+      }
+
+      const result = await AuthController.updateProfileContactUseCase.execute(userId, req.body);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || 'Gagal memperbarui data kontak profil.' });
+    }
+  }
+
+  public static async changePassword(req: any, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.sub;
+      if (!userId) {
+        res.status(401).json({ message: 'Autentikasi diperlukan.' });
+        return;
+      }
+
+      const result = await AuthController.changeUserPasswordUseCase.execute(userId, req.body);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || 'Gagal memperbarui kata sandi.' });
     }
   }
 
